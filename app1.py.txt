@@ -1,0 +1,108 @@
+import random
+import streamlit as st
+
+st.set_page_config(page_title="Pink XO ♡", page_icon="🎀", layout="centered")
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+html, body, [class*="css"] { font-family: 'Nunito', sans-serif; }
+.stApp { background: linear-gradient(145deg, #fff7fb 0%, #f8efff 100%); }
+.block-container { max-width: 520px; padding-top: 2rem; }
+h1, h2, h3, p { text-align: center; }
+h1 { color: #d65d9b; font-weight: 900; }
+.subtitle { color: #9272b8; text-align:center; margin-top:-12px; }
+div.stButton > button {
+    border: 2px solid #f2c6dc; border-radius: 18px; min-height: 76px;
+    background: #fff; color: #d65d9b; font-size: 30px; font-weight: 900;
+    box-shadow: 0 4px 12px #e8cddd55; transition: .15s;
+}
+div.stButton > button:hover { border-color:#d65d9b; background:#fff0f7; color:#b94e88; }
+div.stButton > button:disabled { background:#fff; color:#c078a0; border-color:#f2c6dc; }
+div[data-testid="stRadio"] { display:flex; justify-content:center; }
+.stAlert { border-radius:16px; }
+div.stButton > button[kind="primary"] { background:#d96da5; color:white; border:0; min-height:48px; font-size:16px; }
+.footer { text-align:center; color:#b58eaa; font-size:13px; margin-top:18px; }
+</style>
+""", unsafe_allow_html=True)
+
+LINES = [(0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(2,4,6)]
+
+def winner(board):
+    for a,b,c in LINES:
+        if board[a] and board[a] == board[b] == board[c]:
+            return board[a]
+    return None
+
+def computer_move(board):
+    # Win if possible, otherwise block, otherwise take center/corner/random.
+    for mark in ("O", "X"):
+        for i in range(9):
+            if board[i] == "":
+                test = board[:]
+                test[i] = mark
+                if winner(test) == mark:
+                    return i
+    if board[4] == "":
+        return 4
+    corners = [i for i in (0,2,6,8) if board[i] == ""]
+    if corners:
+        return random.choice(corners)
+    return random.choice([i for i, v in enumerate(board) if v == ""])
+
+def reset():
+    st.session_state.board = [""] * 9
+    st.session_state.turn = "X"
+    st.session_state.finished = False
+    st.session_state.message = ""
+
+if "board" not in st.session_state:
+    reset()
+if "mode" not in st.session_state:
+    st.session_state.mode = "صاحبتين"
+
+st.markdown("<h1>🎀 Pink XO ♡</h1>", unsafe_allow_html=True)
+st.markdown('<p class="subtitle">لعبة صغيرة، ووقت حلو! ✨</p>', unsafe_allow_html=True)
+
+mode = st.radio("اختاري طريقة اللعب", ["صاحبتين", "ضد الكمبيوتر"], horizontal=True,
+                index=0 if st.session_state.mode == "صاحبتين" else 1)
+if mode != st.session_state.mode:
+    st.session_state.mode = mode
+    reset()
+
+win = winner(st.session_state.board)
+draw = not win and all(st.session_state.board)
+
+if win:
+    st.success(f"🎉 اللاعب {win} فاز! مبروك!")
+elif draw:
+    st.info("تعادل! جولة ثانية؟ 💗")
+else:
+    label = "دورك (X)" if mode == "ضد الكمبيوتر" and st.session_state.turn == "X" else f"دور اللاعب {st.session_state.turn}"
+    st.markdown(f"<h3 style='color:#9874bd'>{label} 💕</h3>", unsafe_allow_html=True)
+
+cols = st.columns(3, gap="small")
+for i in range(9):
+    with cols[i % 3]:
+        mark = st.session_state.board[i]
+        button_label = mark if mark else "♡"
+        if st.button(button_label, key=f"cell_{i}", use_container_width=True,
+                     disabled=bool(mark) or bool(win) or draw or
+                     (mode == "ضد الكمبيوتر" and st.session_state.turn == "O")):
+            st.session_state.board[i] = st.session_state.turn
+            if not winner(st.session_state.board) and not all(st.session_state.board):
+                if mode == "ضد الكمبيوتر":
+                    st.session_state.turn = "O"
+                    move = computer_move(st.session_state.board)
+                    st.session_state.board[move] = "O"
+                    st.session_state.turn = "X"
+                else:
+                    st.session_state.turn = "O" if st.session_state.turn == "X" else "X"
+            st.rerun()
+
+st.write("")
+if st.button("🔄 لعبة جديدة", type="primary", use_container_width=True):
+    reset()
+    st.rerun()
+
+st.markdown('<div class="footer">Made with love ♡</div>', unsafe_allow_html=True)
